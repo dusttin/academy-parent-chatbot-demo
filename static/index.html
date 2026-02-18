@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학원 학부모 응대봇 데모</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏫</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f0faf4; min-height: 100vh; }
+        .container { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+
+        .header { background: linear-gradient(135deg, #059669, #10b981); color: white; padding: 24px; border-radius: 16px; margin-bottom: 20px; }
+        .header h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+        .header p { font-size: 0.88rem; opacity: 0.88; line-height: 1.5; }
+        .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; margin-top: 10px; }
+
+        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .card h2 { font-size: 0.95rem; color: #374151; margin-bottom: 14px; font-weight: 600; }
+
+        .btn { border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 0.88rem; font-weight: 500; transition: opacity 0.15s; }
+        .btn:hover { opacity: 0.85; }
+        .btn-outline { background: #f9fafb; border: 1px solid #d1d5db; color: #374151; }
+        .btn-green { background: #10b981; color: white; margin-left: 8px; }
+        .upload-status { margin-top: 10px; font-size: 0.83rem; color: #6b7280; min-height: 20px; }
+
+        .messages { min-height: 320px; max-height: 420px; overflow-y: auto; margin-bottom: 14px; display: flex; flex-direction: column; gap: 14px; }
+        .message { display: flex; flex-direction: column; }
+        .message.user { align-items: flex-end; }
+        .message.bot { align-items: flex-start; }
+        .label { font-size: 0.75rem; color: #9ca3af; margin-bottom: 4px; }
+        .bubble { padding: 12px 16px; border-radius: 14px; max-width: 78%; font-size: 0.9rem; line-height: 1.65; word-break: keep-all; }
+        .user .bubble { background: #10b981; color: white; border-bottom-right-radius: 4px; }
+        .bot .bubble { background: #f0fdf4; color: #111827; border: 1px solid #d1fae5; border-bottom-left-radius: 4px; }
+        .bubble.loading { color: #9ca3af; font-style: italic; }
+
+        .input-row { display: flex; gap: 8px; }
+        .input-row input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; font-size: 0.9rem; outline: none; transition: border-color 0.15s; font-family: inherit; }
+        .input-row input:focus { border-color: #10b981; }
+        .input-row button { background: #10b981; color: white; border: none; border-radius: 10px; padding: 12px 20px; cursor: pointer; font-size: 0.9rem; font-weight: 500; white-space: nowrap; }
+        .input-row button:hover { background: #059669; }
+
+        .questions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+        .q-chip { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 6px 12px; border-radius: 20px; font-size: 0.82rem; cursor: pointer; transition: background 0.15s; }
+        .q-chip:hover { background: #d1fae5; }
+
+        .divider { border: none; border-top: 1px solid #f0fdf4; margin: 12px 0; }
+        .footer { text-align: center; font-size: 0.78rem; color: #9ca3af; margin-top: 12px; }
+
+        .roi-box { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; }
+        .roi-box p { font-size: 0.85rem; color: #065f46; line-height: 1.7; }
+        .roi-box strong { color: #059669; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>🏫 학원 학부모 응대봇</h1>
+        <p>학부모 반복 문의를 AI가 24시간 자동으로 응대합니다<br>원장님은 중요한 상담에만 집중하세요</p>
+        <span class="badge" id="statusBadge">● 대기 중</span>
+    </div>
+
+    <div class="roi-box">
+        <p>📊 도입 효과: 학부모 문의 응대 <strong>월 30시간 절약</strong> · 야간·주말 자동 응대 · 즉각 응답으로 <strong>학부모 만족도 향상</strong></p>
+    </div>
+
+    <div class="card">
+        <h2>📄 학원 안내 자료 등록</h2>
+        <input type="file" id="pdfInput" accept=".pdf" style="display:none">
+        <button class="btn btn-outline" onclick="document.getElementById('pdfInput').click()">📂 PDF 업로드</button>
+        <button class="btn btn-green" onclick="loadSampleData()">✨ 샘플로 바로 체험</button>
+        <p class="upload-status" id="uploadStatus">학원 안내문 PDF를 올리거나, 샘플 데이터로 먼저 체험해보세요.</p>
+    </div>
+
+    <div class="card">
+        <h2>💬 학부모 문의 응대</h2>
+
+        <p style="font-size:0.82rem; color:#6b7280; margin-bottom:10px;">자주 오는 문의 예시</p>
+        <div class="questions">
+            <span class="q-chip" onclick="fillQuestion('원비는 언제까지 내야 하나요?')">원비 납부일</span>
+            <span class="q-chip" onclick="fillQuestion('수업은 몇 시에 시작하나요?')">수업 시간</span>
+            <span class="q-chip" onclick="fillQuestion('아이가 결석하면 어떻게 연락하나요?')">결석 연락</span>
+            <span class="q-chip" onclick="fillQuestion('보강 수업은 어떻게 신청하나요?')">보강 신청</span>
+            <span class="q-chip" onclick="fillQuestion('환불은 어떻게 받나요?')">환불 정책</span>
+            <span class="q-chip" onclick="fillQuestion('준비물이 뭐가 있나요?')">준비물</span>
+        </div>
+
+        <hr class="divider">
+
+        <div class="messages" id="messages">
+            <div class="message bot">
+                <span class="label">🏫 학원 안내봇</span>
+                <div class="bubble">안녕하세요! 학원 관련 궁금한 점이 있으시면 편하게 문의해 주세요 😊<br>위에서 샘플 데이터를 먼저 불러오시면 바로 체험하실 수 있습니다.</div>
+            </div>
+        </div>
+
+        <div class="input-row">
+            <input type="text" id="questionInput" placeholder="문의 내용을 입력하세요..." onkeypress="handleEnter(event)">
+            <button onclick="sendMessage()">문의</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        Powered by ChromaDB + OpenAI gpt-4o-mini &nbsp;|&nbsp;
+        <a href="https://github.com/dusttin/academy-parent-chatbot-demo" style="color:#6b7280;">GitHub</a>
+        &nbsp;|&nbsp; 도입 문의: dusttin@naver.com
+    </div>
+
+</div>
+
+<script>
+const SAMPLE_FAQ = `
+[학원 기본 정보]
+학원명: 한빛 영어수학 학원
+위치: 대구 수성구 범어동 123-4 (범어네거리 도보 3분)
+주차: 건물 지하 주차장 이용 가능 (30분 무료)
+운영시간: 평일 14:00~22:00 / 토요일 10:00~18:00 / 일요일·공휴일 휴원
+연락처: 053-123-4567 / 카카오톡 채널 @한빛학원
+
+[원비 및 결제]
+원비: 초등 월 18만원 / 중등 월 22만원 / 고등 월 28만원
+납부일: 매월 25일 (다음 달 수강료)
+납부 방법: 계좌이체 (국민은행 123456-78-901234 한빛학원) 또는 카드 단말기
+환불 정책: 수업 시작 전 전액 환불 / 수강 후 잔여 일수 기준 비례 환불
+미납 시: 3일 이상 미납 시 문자 안내 / 15일 이상 미납 시 수강 정지
+
+[수업 일정]
+초등반: 월·수·금 15:00~17:00
+중등반: 월·수·금 17:00~19:30
+고등반: 월~금 19:30~22:00, 토 10:00~13:00
+휴강일: 법정공휴일, 설·추석 연휴
+보강: 휴강 시 별도 보강 수업 진행 (문자 공지)
+
+[출결 및 결석]
+결석 연락: 당일 오전 10시 이전 카카오톡 채널 또는 전화 연락
+조퇴: 수업 중 조퇴 시 보호자 직접 방문 또는 사전 연락 필수
+무단결석: 3회 이상 무단결석 시 학부모 상담 진행
+출석부: 매 수업 출석 체크 후 월말 출석표 카카오톡 발송
+
+[수업 및 교재]
+교재: 학원 자체 프린트물 제공 (별도 구매 불필요)
+준비물: 필기도구, 형광펜, 개인 노트
+숙제: 매 수업 후 숙제 부여 / 미제출 시 방과 후 지도
+레벨 테스트: 입원 시 무료 진단 평가 후 반 배정
+
+[상담 및 성적]
+월간 성적 리포트: 매월 말 카카오톡으로 발송
+개인 상담: 월 1회 정기 상담 또는 요청 시 수시 상담
+담당 선생님: 초등 김선생님 / 중등 이선생님 / 고등 박선생님
+
+[기타]
+간식: 수업 중 음식물 반입 금지
+분실물: 분실물은 1개월 보관 후 폐기
+사진·영상: 원내 촬영은 원장 허가 후 가능
+`;
+
+document.getElementById('pdfInput').addEventListener('change', uploadPDF);
+
+async function uploadPDF(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    setStatus('업로드 중...');
+    try {
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) {
+            setStatus('❌ ' + (data.detail || '오류가 발생했습니다.'));
+            return;
+        }
+        setStatus(data.message);
+        document.getElementById('statusBadge').textContent = `● ${data.total_indexed}개 청크 인덱싱 완료`;
+    } catch {
+        setStatus('❌ 서버에 연결할 수 없습니다.');
+    }
+}
+
+async function loadSampleData() {
+    setStatus('샘플 데이터 로딩 중...');
+    try {
+        const res = await fetch('/preload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: SAMPLE_FAQ })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            setStatus('❌ ' + (data.detail || '오류가 발생했습니다.'));
+            addMessage('bot', data.detail || '샘플 데이터 로드에 실패했습니다.');
+            return;
+        }
+        setStatus('✅ 샘플 학원 자료 로드 완료! 이제 문의해보세요.');
+        document.getElementById('statusBadge').textContent = '● 샘플 데이터 준비 완료';
+        addMessage('bot', '한빛 영어수학 학원 샘플 자료가 준비됐습니다! 위 예시 버튼을 눌러보거나 직접 문의해보세요 😊');
+    } catch {
+        setStatus('❌ 서버에 연결할 수 없습니다.');
+    }
+}
+
+async function sendMessage() {
+    const input = document.getElementById('questionInput');
+    const question = input.value.trim();
+    if (!question) return;
+    addMessage('user', question);
+    input.value = '';
+    const loadingId = addLoading();
+    try {
+        const res = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question })
+        });
+        const data = await res.json();
+        removeLoading(loadingId);
+        addMessage('bot', data.answer || data.detail || '오류가 발생했습니다.');
+    } catch {
+        removeLoading(loadingId);
+        addMessage('bot', '오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
+}
+
+function addMessage(role, text) {
+    const messages = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    if (role === 'bot') {
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = '🏫 학원 안내봇';
+        div.appendChild(label);
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    text.split('\n').forEach((line, i) => {
+        if (i > 0) bubble.appendChild(document.createElement('br'));
+        bubble.appendChild(document.createTextNode(line));
+    });
+
+    div.appendChild(bubble);
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+function addLoading() {
+    const id = 'loading_' + Date.now();
+    const messages = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'message bot';
+    div.id = id;
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = '🏫 학원 안내봇';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble loading';
+    bubble.textContent = '답변 생성 중...';
+    div.appendChild(label);
+    div.appendChild(bubble);
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    return id;
+}
+
+function removeLoading(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+function fillQuestion(q) {
+    document.getElementById('questionInput').value = q;
+    document.getElementById('questionInput').focus();
+}
+
+function handleEnter(e) {
+    if (e.key === 'Enter') sendMessage();
+}
+
+function setStatus(msg) {
+    document.getElementById('uploadStatus').textContent = msg;
+}
+</script>
+</body>
+</html>
